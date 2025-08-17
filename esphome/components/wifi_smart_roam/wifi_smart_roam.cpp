@@ -1,21 +1,8 @@
-// Only include these if the features are enabled; matches ESPHome core style.
-// This avoids include-path errors on minimal builds.
-#ifdef USE_SENSOR
-  #include "esphome/components/sensor/sensor.h"
-#endif
-#ifdef USE_TEXT_SENSOR
-  #include "esphome/components/text_sensor/text_sensor.h"
-#endif
-
+#include "esphome/core/log.h"  // ESP_LOGD/ESP_LOGI
 #include "wifi_smart_roam.h"
 
 namespace esphome {
 namespace wifi_smart_roam {
-
-void WifiSmartRoam::setup() {
-  last_run_ = millis();
-  publish_current_();
-}
 
 void WifiSmartRoam::loop() {
   const uint32_t now = millis();
@@ -25,23 +12,25 @@ void WifiSmartRoam::loop() {
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
   if (WiFi.status() != WL_CONNECTED) return;
 
-  const std::string ssid = target_ssid_.empty() ? std::string(WiFi.SSID().c_str())
-                                                : target_ssid_;
+  const std::string ssid = target_ssid_.empty()
+                           ? std::string(WiFi.SSID().c_str())
+                           : target_ssid_;
   if (ssid.empty()) return;
 
   const int cur_rssi = WiFi.RSSI();
   const String cur_bssid = WiFi.BSSIDstr();
   publish_current_();
 
+  // active scan (include hidden)
   const int n = WiFi.scanNetworks(/*async=*/false, /*show_hidden=*/true);
   if (n <= 0) {
     ESP_LOGD(TAG, "Scan returned %d networks.", n);
     return;
   }
 
-  int best_rssi = -127;
+  int    best_rssi = -127;
   String best_bssid_str;
-  int best_channel = 0;
+  int    best_channel = 0;
 
   for (int i = 0; i < n; i++) {
     if (WiFi.SSID(i) != ssid.c_str()) continue;
@@ -49,6 +38,7 @@ void WifiSmartRoam::loop() {
     if (bssid_i == cur_bssid) continue;
     const int rssi_i = WiFi.RSSI(i);
     if (rssi_i < min_rssi_to_consider_) continue;
+
     if (rssi_i > best_rssi) {
       best_rssi = rssi_i;
       best_bssid_str = bssid_i;
@@ -57,12 +47,8 @@ void WifiSmartRoam::loop() {
   }
   WiFi.scanDelete();
 
-#ifdef USE_SENSOR
   if (best_rssi_sensor_) best_rssi_sensor_->publish_state(best_rssi > -127 ? best_rssi : NAN);
-#endif
-#ifdef USE_TEXT_SENSOR
   if (best_bssid_text_)  best_bssid_text_->publish_state(best_rssi > -127 ? best_bssid_str.c_str() : "");
-#endif
 
   if (best_rssi <= -127) {
     ESP_LOGD(TAG, "No alternate BSSID for '%s' found.", ssid.c_str());
@@ -82,12 +68,8 @@ void WifiSmartRoam::loop() {
 
 void WifiSmartRoam::publish_current_() {
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-  #ifdef USE_SENSOR
-    if (current_rssi_sensor_) current_rssi_sensor_->publish_state(WiFi.RSSI());
-  #endif
-  #ifdef USE_TEXT_SENSOR
-    if (current_bssid_text_) current_bssid_text_->publish_state(WiFi.BSSIDstr().c_str());
-  #endif
+  if (current_rssi_sensor_) current_rssi_sensor_->publish_state(WiFi.RSSI());
+  if (current_bssid_text_) current_bssid_text_->publish_state(WiFi.BSSIDstr().c_str());
 #endif
 }
 
@@ -130,7 +112,7 @@ void WifiSmartRoam::steer_to_bssid_(const char *ssid, const String &bssid_str, i
   wifi_station_set_config_current(&cfg);
 
   if (channel > 0) {
-    wifi_set_channel(channel);
+    wifi_set_channel(channel);  // hint to speed association
   }
   wifi_station_connect();
 #endif

@@ -49,7 +49,7 @@ async def to_code(config):
     cg.add(var.set_stronger_by_db(config[CONF_STRONGER_BY_DB]))
     cg.add(var.set_min_rssi_to_consider(config[CONF_MIN_RSSI]))
 
-    # TimePeriod → ms
+    # TimePeriod → milliseconds
     interval_ms = config[CONF_INTERVAL].total_milliseconds
     cg.add(var.set_interval_ms(interval_ms))
 

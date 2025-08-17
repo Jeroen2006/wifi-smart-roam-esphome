@@ -2,6 +2,10 @@
 #include "esphome/core/component.h"
 #include "esphome/components/wifi/wifi_component.h"
 
+// include full sensor/text_sensor headers so generated main.cpp has complete types
+#include "esphome/components/sensor/sensor.h"
+#include "esphome/components/text_sensor/text_sensor.h"
+
 #if defined(ARDUINO_ARCH_ESP32)
   #include <WiFi.h>
   #include "esp_wifi.h"
@@ -11,12 +15,6 @@
     #include "user_interface.h"  // station_config, wifi_station_*
   }
 #endif
-
-// Forward-declare to avoid include path issues; real headers are in .cpp under guards.
-namespace esphome {
-namespace sensor { class Sensor; }
-namespace text_sensor { class TextSensor; }
-}
 
 namespace esphome {
 namespace wifi_smart_roam {
@@ -35,7 +33,7 @@ class WifiSmartRoam : public Component {
 
   float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
 
-  void setup() override;
+  void setup() override { last_run_ = millis(); publish_current_(); }
   void loop() override;
 
  protected:
