@@ -3,13 +3,14 @@
 #include "esphome/components/wifi/wifi_component.h"
 #include "esphome/components/sensor/sensor.h"
 #include "esphome/components/text_sensor/text_sensor.h"
-#include <WiFi.h>
 
 #if defined(ARDUINO_ARCH_ESP32)
+  #include <WiFi.h>
   #include "esp_wifi.h"
 #elif defined(ARDUINO_ARCH_ESP8266)
+  #include <ESP8266WiFi.h>
   extern "C" {
-    #include "user_interface.h"  // for station_config, wifi_station_* API
+    #include "user_interface.h"
   }
 #endif
 

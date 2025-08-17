@@ -1,0 +1,8 @@
+{
+    "name": "WiFi Smart Roam",
+    "domain": "wifi_smart_roam",
+    "version": "1.1.1",
+    "authors": ["jeroen2006"],
+    "dependencies": ["wifi", "sensor", "text_sensor"],
+    "platforms": ["esp32", "esp8266"]
+  }
