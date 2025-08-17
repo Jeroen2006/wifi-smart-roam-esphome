@@ -1,10 +1,11 @@
+// esphome/components/wifi_smart_roam/wifi_smart_roam.h
 #pragma once
 
 #include "esphome/core/component.h"
 #include "esphome/components/wifi/wifi_component.h"
 #include "esphome/core/log.h"  // ESP_LOG*
 
-// Try to include sensor/text_sensor; fall back to "no-diagnostics" if missing.
+// Try to include sensor/text_sensor; fall back gracefully if unavailable
 #if __has_include("esphome/components/sensor/sensor.h")
   #include "esphome/components/sensor/sensor.h"
   #define WSR_HAS_SENSOR 1
@@ -24,7 +25,9 @@
   #include "esp_wifi.h"
 #elif defined(ARDUINO_ARCH_ESP8266)
   #include <ESP8266WiFi.h>
-  extern "C" { #include "user_interface.h" }
+  extern "C" {
+    #include "user_interface.h"   // <-- must be inside extern "C" block on its own lines
+  }
 #endif
 
 namespace esphome {
