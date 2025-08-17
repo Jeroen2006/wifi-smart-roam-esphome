@@ -21,7 +21,7 @@ void WifiSmartRoam::loop() {
   const String cur_bssid = WiFi.BSSIDstr();
   publish_current_();
 
-  // active scan (include hidden)
+  // Active scan (include hidden)
   const int n = WiFi.scanNetworks(/*async=*/false, /*show_hidden=*/true);
   if (n <= 0) {
     ESP_LOGD(TAG, "Scan returned %d networks.", n);

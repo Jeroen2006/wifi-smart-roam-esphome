@@ -1,10 +1,7 @@
 #pragma once
-#include "esphome/core/component.h"
-#include "esphome/components/wifi/wifi_component.h"
-
-// include full sensor/text_sensor headers so generated main.cpp has complete types
-#include "esphome/components/sensor/sensor.h"
-#include "esphome/components/text_sensor/text_sensor.h"
+// Use the umbrella header so Sensor/TextSensor/etc are always available.
+// This avoids include-path issues on ESP8266 builds.
+#include "esphome.h"
 
 #if defined(ARDUINO_ARCH_ESP32)
   #include <WiFi.h>
