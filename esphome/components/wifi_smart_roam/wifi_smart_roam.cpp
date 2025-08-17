@@ -1,22 +1,16 @@
+// Only include these if the features are enabled; matches ESPHome core style.
+// This avoids include-path errors on minimal builds.
+#ifdef USE_SENSOR
+  #include "esphome/components/sensor/sensor.h"
+#endif
+#ifdef USE_TEXT_SENSOR
+  #include "esphome/components/text_sensor/text_sensor.h"
+#endif
+
 #include "wifi_smart_roam.h"
-#include "esphome/components/sensor/sensor.h"
-#include "esphome/components/text_sensor/text_sensor.h"
-#include "esphome/core/log.h"
 
 namespace esphome {
 namespace wifi_smart_roam {
-
-// simple setters/getters
-void WifiSmartRoam::set_target_ssid(const std::string &s) { target_ssid_ = s; }
-void WifiSmartRoam::set_stronger_by_db(int v) { stronger_by_db_ = v; }
-void WifiSmartRoam::set_min_rssi_to_consider(int v) { min_rssi_to_consider_ = v; }
-void WifiSmartRoam::set_interval_ms(uint32_t ms) { interval_ms_ = ms; }
-void WifiSmartRoam::set_current_rssi_sensor(sensor::Sensor *s) { current_rssi_sensor_ = s; }
-void WifiSmartRoam::set_best_rssi_sensor(sensor::Sensor *s) { best_rssi_sensor_ = s; }
-void WifiSmartRoam::set_current_bssid_text(text_sensor::TextSensor *t) { current_bssid_text_ = t; }
-void WifiSmartRoam::set_best_bssid_text(text_sensor::TextSensor *t) { best_bssid_text_ = t; }
-
-float WifiSmartRoam::get_setup_priority() const { return setup_priority::AFTER_WIFI; }
 
 void WifiSmartRoam::setup() {
   last_run_ = millis();
@@ -63,8 +57,12 @@ void WifiSmartRoam::loop() {
   }
   WiFi.scanDelete();
 
+#ifdef USE_SENSOR
   if (best_rssi_sensor_) best_rssi_sensor_->publish_state(best_rssi > -127 ? best_rssi : NAN);
+#endif
+#ifdef USE_TEXT_SENSOR
   if (best_bssid_text_)  best_bssid_text_->publish_state(best_rssi > -127 ? best_bssid_str.c_str() : "");
+#endif
 
   if (best_rssi <= -127) {
     ESP_LOGD(TAG, "No alternate BSSID for '%s' found.", ssid.c_str());
@@ -84,8 +82,12 @@ void WifiSmartRoam::loop() {
 
 void WifiSmartRoam::publish_current_() {
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-  if (current_rssi_sensor_) current_rssi_sensor_->publish_state(WiFi.RSSI());
-  if (current_bssid_text_) current_bssid_text_->publish_state(WiFi.BSSIDstr().c_str());
+  #ifdef USE_SENSOR
+    if (current_rssi_sensor_) current_rssi_sensor_->publish_state(WiFi.RSSI());
+  #endif
+  #ifdef USE_TEXT_SENSOR
+    if (current_bssid_text_) current_bssid_text_->publish_state(WiFi.BSSIDstr().c_str());
+  #endif
 #endif
 }
 
@@ -128,7 +130,7 @@ void WifiSmartRoam::steer_to_bssid_(const char *ssid, const String &bssid_str, i
   wifi_station_set_config_current(&cfg);
 
   if (channel > 0) {
-    wifi_set_channel(channel);  // optional hint
+    wifi_set_channel(channel);
   }
   wifi_station_connect();
 #endif

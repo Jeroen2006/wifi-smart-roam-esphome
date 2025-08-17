@@ -8,30 +8,33 @@
 #elif defined(ARDUINO_ARCH_ESP8266)
   #include <ESP8266WiFi.h>
   extern "C" {
-    #include "user_interface.h"
+    #include "user_interface.h"  // station_config, wifi_station_*
   }
 #endif
 
-// forward declarations (avoid heavy includes here)
-namespace esphome { namespace sensor { class Sensor; } }
-namespace esphome { namespace text_sensor { class TextSensor; } }
+// Forward-declare to avoid include path issues; real headers are in .cpp under guards.
+namespace esphome {
+namespace sensor { class Sensor; }
+namespace text_sensor { class TextSensor; }
+}
 
 namespace esphome {
 namespace wifi_smart_roam {
 
 class WifiSmartRoam : public Component {
  public:
-  void set_target_ssid(const std::string &s);
-  void set_stronger_by_db(int v);
-  void set_min_rssi_to_consider(int v);
-  void set_interval_ms(uint32_t ms);
+  void set_target_ssid(const std::string &s) { target_ssid_ = s; }
+  void set_stronger_by_db(int v) { stronger_by_db_ = v; }
+  void set_min_rssi_to_consider(int v) { min_rssi_to_consider_ = v; }
+  void set_interval_ms(uint32_t ms) { interval_ms_ = ms; }
 
-  void set_current_rssi_sensor(sensor::Sensor *s);
-  void set_best_rssi_sensor(sensor::Sensor *s);
-  void set_current_bssid_text(text_sensor::TextSensor *t);
-  void set_best_bssid_text(text_sensor::TextSensor *t);
+  void set_current_rssi_sensor(sensor::Sensor *s) { current_rssi_sensor_ = s; }
+  void set_best_rssi_sensor(sensor::Sensor *s) { best_rssi_sensor_ = s; }
+  void set_current_bssid_text(text_sensor::TextSensor *t) { current_bssid_text_ = t; }
+  void set_best_bssid_text(text_sensor::TextSensor *t) { best_bssid_text_ = t; }
 
-  float get_setup_priority() const override;
+  float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
+
   void setup() override;
   void loop() override;
 
