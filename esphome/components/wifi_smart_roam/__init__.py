@@ -51,7 +51,10 @@ async def to_code(config):
     cg.add(var.set_target_ssid(config[CONF_TARGET_SSID]))
     cg.add(var.set_stronger_by_db(config[CONF_STRONGER_BY_DB]))
     cg.add(var.set_min_rssi_to_consider(config[CONF_MIN_RSSI]))
-    cg.add(var.set_interval_ms(config[CONF_INTERVAL] * 1000))
+
+    # ✅ Convert TimePeriod to ms
+    interval_ms = config[CONF_INTERVAL].total_milliseconds
+    cg.add(var.set_interval_ms(interval_ms))
 
     if CONF_CURRENT_RSSI in config:
         s = await sensor.new_sensor(config[CONF_CURRENT_RSSI])
