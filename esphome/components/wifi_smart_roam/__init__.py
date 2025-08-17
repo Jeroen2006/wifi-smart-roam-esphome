@@ -3,6 +3,10 @@ import esphome.config_validation as cv
 from esphome.const import CONF_ID, CONF_INTERVAL
 from esphome.components import sensor, text_sensor
 
+CODEOWNERS = ["@you"]
+AUTO_LOAD = ["wifi", "sensor", "text_sensor"]  # <-- add these
+MULTI_CONF = False
+
 wifi_smart_roam_ns = cg.esphome_ns.namespace("wifi_smart_roam")
 WifiSmartRoam = wifi_smart_roam_ns.class_("WifiSmartRoam", cg.Component)
 
