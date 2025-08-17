@@ -1,4 +1,3 @@
-#include "esphome/core/log.h"  // ESP_LOGD/ESP_LOGI
 #include "wifi_smart_roam.h"
 
 namespace esphome {
@@ -21,7 +20,6 @@ void WifiSmartRoam::loop() {
   const String cur_bssid = WiFi.BSSIDstr();
   publish_current_();
 
-  // Active scan (include hidden)
   const int n = WiFi.scanNetworks(/*async=*/false, /*show_hidden=*/true);
   if (n <= 0) {
     ESP_LOGD(TAG, "Scan returned %d networks.", n);
@@ -47,8 +45,12 @@ void WifiSmartRoam::loop() {
   }
   WiFi.scanDelete();
 
+#if WSR_HAS_SENSOR
   if (best_rssi_sensor_) best_rssi_sensor_->publish_state(best_rssi > -127 ? best_rssi : NAN);
+#endif
+#if WSR_HAS_TEXT_SENSOR
   if (best_bssid_text_)  best_bssid_text_->publish_state(best_rssi > -127 ? best_bssid_str.c_str() : "");
+#endif
 
   if (best_rssi <= -127) {
     ESP_LOGD(TAG, "No alternate BSSID for '%s' found.", ssid.c_str());
@@ -68,13 +70,17 @@ void WifiSmartRoam::loop() {
 
 void WifiSmartRoam::publish_current_() {
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+#if WSR_HAS_SENSOR
   if (current_rssi_sensor_) current_rssi_sensor_->publish_state(WiFi.RSSI());
+#endif
+#if WSR_HAS_TEXT_SENSOR
   if (current_bssid_text_) current_bssid_text_->publish_state(WiFi.BSSIDstr().c_str());
+#endif
 #endif
 }
 
 bool WifiSmartRoam::parse_bssid_(const String &str, uint8_t out[6]) {
-  if (str.length() != 17) return false;  // "aa:bb:cc:dd:ee:ff"
+  if (str.length() != 17) return false;
   for (int i = 0, j = 0; i < 17 && j < 6; i += 3, j++) {
     char buf[3] = { str[i], str[i+1], 0 };
     out[j] = static_cast<uint8_t>(strtoul(buf, nullptr, 16));
@@ -111,9 +117,7 @@ void WifiSmartRoam::steer_to_bssid_(const char *ssid, const String &bssid_str, i
   wifi_station_disconnect();
   wifi_station_set_config_current(&cfg);
 
-  if (channel > 0) {
-    wifi_set_channel(channel);  // hint to speed association
-  }
+  if (channel > 0) wifi_set_channel(channel);
   wifi_station_connect();
 #endif
 }
