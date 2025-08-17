@@ -1,4 +1,3 @@
-// esphome/components/wifi_smart_roam/wifi_smart_roam.h
 #pragma once
 
 #include "esphome/core/component.h"
@@ -26,7 +25,7 @@
 #elif defined(ARDUINO_ARCH_ESP8266)
   #include <ESP8266WiFi.h>
   extern "C" {
-    #include "user_interface.h"   // <-- must be inside extern "C" block on its own lines
+    #include "user_interface.h"   // station_config, wifi_station_*
   }
 #endif
 
@@ -57,7 +56,24 @@ class WifiSmartRoam : public Component {
 #endif
 
   float get_setup_priority() const override { return setup_priority::AFTER_WIFI; }
-  void setup() override { last_run_ = millis(); publish_current_(); }
+
+  // Boot behavior: publish "best = current" so values aren't unknown at startup
+  void setup() override { 
+    // (Optional) If you also want an immediate scan, uncomment the next line:
+    // last_run_ = millis() - interval_ms_;
+    last_run_ = millis();
+    publish_current_();
+
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+  #if WSR_HAS_SENSOR
+    if (best_rssi_sensor_) best_rssi_sensor_->publish_state(WiFi.RSSI());
+  #endif
+  #if WSR_HAS_TEXT_SENSOR
+    if (best_bssid_text_) best_bssid_text_->publish_state(WiFi.BSSIDstr().c_str());
+  #endif
+#endif
+  }
+
   void loop() override;
 
  protected:

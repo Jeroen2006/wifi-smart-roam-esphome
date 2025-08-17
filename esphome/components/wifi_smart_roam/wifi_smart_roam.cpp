@@ -20,6 +20,7 @@ void WifiSmartRoam::loop() {
   const String cur_bssid = WiFi.BSSIDstr();
   publish_current_();
 
+  // Active scan (include hidden)
   const int n = WiFi.scanNetworks(/*async=*/false, /*show_hidden=*/true);
   if (n <= 0) {
     ESP_LOGD(TAG, "Scan returned %d networks.", n);
@@ -46,10 +47,10 @@ void WifiSmartRoam::loop() {
   WiFi.scanDelete();
 
 #if WSR_HAS_SENSOR
-  if (best_rssi_sensor_) best_rssi_sensor_->publish_state(best_rssi > -127 ? best_rssi : NAN);
+  if (best_rssi_sensor_) best_rssi_sensor_->publish_state(best_rssi > -127 ? best_rssi : static_cast<float>(WiFi.RSSI()));
 #endif
 #if WSR_HAS_TEXT_SENSOR
-  if (best_bssid_text_)  best_bssid_text_->publish_state(best_rssi > -127 ? best_bssid_str.c_str() : "");
+  if (best_bssid_text_)  best_bssid_text_->publish_state(best_rssi > -127 ? best_bssid_str.c_str() : WiFi.BSSIDstr().c_str());
 #endif
 
   if (best_rssi <= -127) {
@@ -80,7 +81,7 @@ void WifiSmartRoam::publish_current_() {
 }
 
 bool WifiSmartRoam::parse_bssid_(const String &str, uint8_t out[6]) {
-  if (str.length() != 17) return false;
+  if (str.length() != 17) return false;  // "aa:bb:cc:dd:ee:ff"
   for (int i = 0, j = 0; i < 17 && j < 6; i += 3, j++) {
     char buf[3] = { str[i], str[i+1], 0 };
     out[j] = static_cast<uint8_t>(strtoul(buf, nullptr, 16));
