@@ -1,8 +1,6 @@
 #pragma once
 #include "esphome/core/component.h"
 #include "esphome/components/wifi/wifi_component.h"
-#include "esphome/components/sensor/sensor.h"
-#include "esphome/components/text_sensor/text_sensor.h"
 
 #if defined(ARDUINO_ARCH_ESP32)
   #include <WiFi.h>
@@ -10,9 +8,15 @@
 #elif defined(ARDUINO_ARCH_ESP8266)
   #include <ESP8266WiFi.h>
   extern "C" {
-    #include "user_interface.h"
+    #include "user_interface.h"  // station_config, wifi_station_* API
   }
 #endif
+
+// Forward-declare to avoid include path issues on ESP8266
+namespace esphome {
+namespace sensor { class Sensor; }
+namespace text_sensor { class TextSensor; }
+}
 
 namespace esphome {
 namespace wifi_smart_roam {
@@ -41,6 +45,7 @@ class WifiSmartRoam : public Component {
     if (now - last_run_ < interval_ms_) return;
     last_run_ = now;
 
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
     if (WiFi.status() != WL_CONNECTED) return;
 
     const std::string ssid = target_ssid_.empty() ? std::string(WiFi.SSID().c_str())
@@ -49,10 +54,9 @@ class WifiSmartRoam : public Component {
 
     const int cur_rssi = WiFi.RSSI();
     const String cur_bssid = WiFi.BSSIDstr();
-
     publish_current_();
 
-    // Active scan, include hidden to catch multi-AP deployments that don't beacon name identically
+    // Scan including hidden (multi-AP deployments may vary)
     const int n = WiFi.scanNetworks(/*async=*/false, /*show_hidden=*/true);
     if (n <= 0) {
       ESP_LOGD(TAG, "Scan returned %d networks.", n);
@@ -72,7 +76,11 @@ class WifiSmartRoam : public Component {
       if (rssi_i > best_rssi) {
         best_rssi = rssi_i;
         best_bssid_str = bssid_i;
+#if defined(ARDUINO_ARCH_ESP32)
         best_channel = WiFi.channel(i);
+#elif defined(ARDUINO_ARCH_ESP8266)
+        best_channel = WiFi.channel(i);
+#endif
       }
     }
     WiFi.scanDelete();
@@ -93,6 +101,7 @@ class WifiSmartRoam : public Component {
       ESP_LOGD(TAG, "Best %ddBm not >= current %ddBm + %ddB. Staying.",
                best_rssi, cur_rssi, stronger_by_db_);
     }
+#endif
   }
 
  protected:
@@ -110,13 +119,14 @@ class WifiSmartRoam : public Component {
   text_sensor::TextSensor *best_bssid_text_{nullptr};
 
   void publish_current_() {
+#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
     if (current_rssi_sensor_) current_rssi_sensor_->publish_state(WiFi.RSSI());
     if (current_bssid_text_) current_bssid_text_->publish_state(WiFi.BSSIDstr().c_str());
+#endif
   }
 
-  // Parse "aa:bb:cc:dd:ee:ff" to 6 bytes
   static bool parse_bssid_(const String &str, uint8_t out[6]) {
-    if (str.length() != 17) return false;
+    if (str.length() != 17) return false;  // "aa:bb:cc:dd:ee:ff"
     for (int i = 0, j = 0; i < 17 && j < 6; i += 3, j++) {
       char buf[3] = { str[i], str[i+1], 0 };
       out[j] = static_cast<uint8_t>(strtoul(buf, nullptr, 16));
@@ -134,37 +144,29 @@ class WifiSmartRoam : public Component {
     esp_wifi_get_config(WIFI_IF_STA, &cfg);
     memcpy(cfg.sta.bssid, bssid, 6);
     cfg.sta.bssid_set = 1;
-    // keep credentials as-is; ESPHome already configured them
     esp_wifi_set_config(WIFI_IF_STA, &cfg);
     esp_wifi_disconnect();
     delay(150);
     esp_wifi_connect();
 
 #elif defined(ARDUINO_ARCH_ESP8266)
-    // Read current SDK station config (includes SSID & password set by ESPHome)
     station_config cfg{};
     wifi_station_get_config(&cfg);
 
-    // Ensure SSID remains the same (optional; otherwise keep current)
     if (ssid && *ssid) {
       memset(cfg.ssid, 0, sizeof(cfg.ssid));
       strncpy(reinterpret_cast<char *>(cfg.ssid), ssid, sizeof(cfg.ssid) - 1);
     }
-
-    // Pin target BSSID
     memcpy(cfg.bssid, bssid, 6);
-    cfg.bssid_set = 1;  // lock association to this BSSID
+    cfg.bssid_set = 1;
 
-    // Apply current config in RAM only
     wifi_station_disconnect();
     wifi_station_set_config_current(&cfg);
 
-    // Hint channel if known (optional optimization)
+    // Optional: hint channel (doesn't hard-force it but can speed assoc)
     if (channel > 0) {
       wifi_set_channel(channel);
     }
-
-    // Reconnect — SDK will honor bssid_set
     wifi_station_connect();
 #endif
   }

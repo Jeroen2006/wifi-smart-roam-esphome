@@ -1,9 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import (
-    CONF_ID,
-    CONF_INTERVAL,
-)
+from esphome.const import CONF_ID, CONF_INTERVAL
 from esphome.components import sensor, text_sensor
 
 CODEOWNERS = ["@you"]
@@ -26,7 +23,7 @@ CONFIG_SCHEMA = cv.Schema({
     cv.Optional(CONF_TARGET_SSID, default=""): cv.string,
     cv.Optional(CONF_STRONGER_BY_DB, default=6): cv.int_,
     cv.Optional(CONF_MIN_RSSI, default=-85): cv.int_,
-    cv.Optional(CONF_INTERVAL, default="1h"): cv.positive_time_period_seconds,
+    cv.Optional(CONF_INTERVAL, default="1h"): cv.positive_time_period,
     cv.Optional(CONF_CURRENT_RSSI): sensor.sensor_schema(
         unit_of_measurement="dBm",
         accuracy_decimals=0,
@@ -52,7 +49,7 @@ async def to_code(config):
     cg.add(var.set_stronger_by_db(config[CONF_STRONGER_BY_DB]))
     cg.add(var.set_min_rssi_to_consider(config[CONF_MIN_RSSI]))
 
-    # ✅ Convert TimePeriod to ms
+    # Convert TimePeriod to milliseconds
     interval_ms = config[CONF_INTERVAL].total_milliseconds
     cg.add(var.set_interval_ms(interval_ms))
 
